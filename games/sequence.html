@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Number Sequence — Puzzlebank</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%238C7B6E'/><text x='16' y='23' text-anchor='middle' font-size='20' fill='white'>∿</text></svg>">
   <link rel="stylesheet" href="../css/style.css" />
   <style>
     /* ── Sequence-specific ─────────────────────────────────────── */
@@ -130,6 +131,9 @@
   <nav class="site-nav">
     <a href="../index.html" class="logo">Puzzlebank</a>
     <a href="../index.html" class="nav-link">← All games</a>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">
+      <span id="theme-icon">☽</span>
+    </button>
   </nav>
 
   <main class="game-wrap">
@@ -146,6 +150,10 @@
         <div class="level-badge mt-1">
           <span class="stat-label">Level</span>
           <span id="level-display" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300">1</span>
+        </div>
+        <div class="level-badge mt-1" id="best-badge" style="display:none">
+          <span class="stat-label">Best</span>
+          <span id="personal-best-display" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300">—</span>
         </div>
       </div>
     </div>
@@ -171,7 +179,9 @@
 
       <div class="streak-dots" id="streak-dots"></div>
 
+      <div id="puzzle-content">
       <div class="sequence-display" id="sequence-display"></div>
+      </div>
 
       <div class="answer-area">
         <div class="hint-text" id="hint-text"></div>
@@ -186,6 +196,7 @@
           <button class="btn btn-accent" id="submit-btn" onclick="submitAnswer()">
             Check →
           </button>
+          <button class="btn btn-dark" id="hint-btn" onclick="useHint()">Hint (1)</button>
         </div>
         <div class="feedback" id="feedback"></div>
       </div>
@@ -200,6 +211,16 @@
       <h2>Game Over</h2>
       <div class="modal-score" id="final-score">0</div>
       <div class="modal-sub" id="final-sub">Reached level 1</div>
+      <div style="display:flex;gap:1.5rem;justify-content:center;margin:0.75rem 0 1.5rem;flex-wrap:wrap" id="stats-row">
+        <div style="text-align:center">
+          <div class="stat-label">Accuracy</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem" id="stat-accuracy">—</div>
+        </div>
+        <div style="text-align:center">
+          <div class="stat-label">Best streak</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem" id="stat-streak">—</div>
+        </div>
+      </div>
       <div class="name-input-row">
         <input type="text" id="player-name" placeholder="Your name" maxlength="20" />
         <button class="btn btn-accent" onclick="saveScore()">Save</button>
@@ -224,6 +245,10 @@
   let streak   = 0;       // correct in a row towards level-up
   let answer   = null;
   let scored   = false;   // prevent double-submit
+  let hints    = 1;       // one hint per game
+  let totalAttempts   = 0;
+  let correctAttempts = 0;
+  let bestStreak      = 0;
   const STREAK_TO_LEVEL = 3; // correct answers to advance level
 
   // ── Sequence generators ────────────────────────────────────────
@@ -355,8 +380,34 @@
   // ── Game flow ──────────────────────────────────────────────────
   let current = null;
 
+  function animateScore(from, to) {
+    const el = document.getElementById('score-display');
+    const diff = to - from;
+    if (diff === 0) return;
+    const steps = 18;
+    const stepTime = 25;
+    let step = 0;
+    const iv = setInterval(() => {
+      step++;
+      el.textContent = Math.round(from + diff * (step / steps)).toLocaleString();
+      if (step >= steps) { el.textContent = to.toLocaleString(); clearInterval(iv); }
+    }, stepTime);
+  }
+
+  function useHint() {
+    if (hints <= 0) return;
+    hints--;
+    document.getElementById('hint-btn').textContent = 'Hint (0)';
+    document.getElementById('hint-btn').disabled = true;
+    document.getElementById('hint-text').textContent = current.hint;
+  }
+
   function startGame() {
     score  = 0; level = 1; lives = 3; streak = 0;
+    hints  = 1;
+    totalAttempts = 0; correctAttempts = 0; bestStreak = 0;
+    document.getElementById('hint-btn').textContent = 'Hint (1)';
+    document.getElementById('hint-btn').disabled = false;
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('game-area').classList.remove('hidden');
     nextPuzzle();
@@ -365,7 +416,16 @@
   function nextPuzzle() {
     scored = false;
     current = generateSequence(level);
-    renderSequence(current.display);
+
+    const puzzleContent = document.getElementById('puzzle-content');
+    puzzleContent.classList.add('puzzle-fade-out');
+    setTimeout(() => {
+      puzzleContent.classList.remove('puzzle-fade-out');
+      renderSequence(current.display);
+      puzzleContent.classList.add('puzzle-fade-in');
+      setTimeout(() => puzzleContent.classList.remove('puzzle-fade-in'), 220);
+    }, 180);
+
     document.getElementById('hint-text').textContent = '';
     setFeedback('');
     updateScoreDisplay();
@@ -402,11 +462,15 @@
     const guess = parseFloat(raw);
     scored = true;
 
+    totalAttempts++;
     if (guess === current.answer) {
       // Correct
+      correctAttempts++;
       const points = Math.round(100 * level * (1 + streak * 0.1));
+      const oldScore = score;
       score += points;
       streak++;
+      if (streak > bestStreak) bestStreak = streak;
       setFeedback(`+${points}  Correct!`, 'correct');
 
       if (streak >= STREAK_TO_LEVEL) {
@@ -414,6 +478,7 @@
         streak = 0;
       }
 
+      animateScore(oldScore, score);
       updateScoreDisplay();
       renderStreakDots();
       setTimeout(nextPuzzle, 900);
@@ -449,6 +514,9 @@
   function showGameOver() {
     document.getElementById('final-score').textContent = score.toLocaleString();
     document.getElementById('final-sub').textContent = `Reached level ${level}`;
+    const accuracy = totalAttempts > 0 ? Math.round(correctAttempts / totalAttempts * 100) : 0;
+    document.getElementById('stat-accuracy').textContent = accuracy + '%';
+    document.getElementById('stat-streak').textContent = bestStreak;
     document.getElementById('gameover-overlay').classList.remove('hidden');
     document.getElementById('player-name').focus();
   }
@@ -474,6 +542,39 @@
       submitAnswer();
     }
   });
+
+  // ── Personal best ──────────────────────────────────────────────
+  (function loadBest() {
+    const best = Storage.getBest('sequence');
+    if (best) {
+      document.getElementById('personal-best-display').textContent = best.score.toLocaleString();
+      document.getElementById('best-badge').style.display = '';
+    }
+  })();
+  </script>
+
+  <script>
+  (function initTheme() {
+    const saved = localStorage.getItem('puzzlebank_theme');
+    if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    updateThemeIcon();
+  })();
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('puzzlebank_theme', 'light');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('puzzlebank_theme', 'dark');
+    }
+    updateThemeIcon();
+  }
+  function updateThemeIcon() {
+    const el = document.getElementById('theme-icon');
+    if (!el) return;
+    el.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '○' : '☽';
+  }
   </script>
 </body>
 </html>

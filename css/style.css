@@ -398,9 +398,78 @@ input[type="text"]:focus { border-color: var(--accent); }
 .mb-3 { margin-bottom: 1.5rem; }
 .hidden { display: none !important; }
 
+/* ── Dark mode ────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:          #1C1A17;
+  --surface:     #242220;
+  --surface-alt: #2C2926;
+  --text:        #E8E4DC;
+  --text-muted:  #8A837C;
+  --border:      #3A3630;
+  --accent:      #A08C7C;
+  --sage:        #7E9589;
+}
+
+[data-theme="dark"] .overlay {
+  background: rgba(28,26,23,0.92);
+}
+
+/* ── Dark mode toggle button ──────────────────────────────────── */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all var(--transition);
+}
+.theme-toggle:hover { border-color: var(--text-muted); color: var(--text); }
+
+/* ── Puzzle fade transitions ──────────────────────────────────── */
+.puzzle-fade-out {
+  animation: fadeOut 0.18s ease forwards;
+}
+.puzzle-fade-in {
+  animation: fadeIn 0.22s ease forwards;
+}
+@keyframes fadeOut {
+  to { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .site-nav { padding: 1rem 1.25rem; }
   .game-wrap { padding: 1.5rem 1rem 3rem; }
   .modal { padding: 2rem 1.5rem; }
+
+  /* Arithmetic keypad — bigger keys on mobile */
+  .keypad {
+    grid-template-columns: repeat(4, 72px);
+    gap: 10px;
+  }
+  .key { height: 64px; font-size: 1.2rem; }
+
+  /* Anagram tiles — smaller on narrow screens */
+  .tile, .answer-slot {
+    width: 44px;
+    height: 48px;
+    font-size: 1.4rem;
+  }
+
+  /* Sequence boxes */
+  .seq-num {
+    width: 52px;
+    height: 52px;
+    font-size: 1.5rem;
+  }
 }

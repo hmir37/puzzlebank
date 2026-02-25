@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Puzzlebank — Mind Games</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%238C7B6E'/><text x='16' y='23' text-anchor='middle' font-size='20' fill='white'>∿</text></svg>">
   <link rel="stylesheet" href="css/style.css" />
   <style>
     /* ── Home-specific styles ───────────────────────────────────── */
@@ -164,6 +165,9 @@
   <nav class="site-nav">
     <span class="logo">Puzzlebank</span>
     <a href="#leaderboard" class="nav-link">Leaderboard</a>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">
+      <span id="theme-icon">☽</span>
+    </button>
   </nav>
 
   <!-- Hero -->
@@ -271,6 +275,29 @@
   </footer>
 
   <script src="js/storage.js"></script>
+  <script>
+    (function initTheme() {
+      const saved = localStorage.getItem('puzzlebank_theme');
+      if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      updateThemeIcon();
+    })();
+    function toggleTheme() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('puzzlebank_theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('puzzlebank_theme', 'dark');
+      }
+      updateThemeIcon();
+    }
+    function updateThemeIcon() {
+      const el = document.getElementById('theme-icon');
+      if (!el) return;
+      el.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '○' : '☽';
+    }
+  </script>
   <script>
     // Populate personal bests on cards
     ['sequence', 'memory', 'anagram', 'arithmetic'].forEach(id => {

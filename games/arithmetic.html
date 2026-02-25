@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arithmetic — Puzzlebank</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%238C7B6E'/><text x='16' y='23' text-anchor='middle' font-size='20' fill='white'>∿</text></svg>">
   <link rel="stylesheet" href="../css/style.css" />
   <style>
     /* ── Arithmetic-specific ───────────────────────────────────── */
@@ -179,6 +180,9 @@
   <nav class="site-nav">
     <a href="../index.html" class="logo">Puzzlebank</a>
     <a href="../index.html" class="nav-link">← All games</a>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">
+      <span id="theme-icon">☽</span>
+    </button>
   </nav>
 
   <main class="game-wrap">
@@ -194,6 +198,10 @@
         <div class="level-badge mt-1">
           <span class="stat-label">Level</span>
           <span id="level-display" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300">1</span>
+        </div>
+        <div class="level-badge mt-1" id="best-badge" style="display:none">
+          <span class="stat-label">Best</span>
+          <span id="personal-best-display" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300">—</span>
         </div>
       </div>
     </div>
@@ -235,8 +243,10 @@
 
       <div class="streak-bar" id="streak-bar"></div>
 
+      <div id="puzzle-content">
       <div class="equation-wrap">
         <div class="equation" id="equation">—</div>
+      </div>
       </div>
 
       <div class="answer-section">
@@ -273,6 +283,16 @@
       <h2>Game Over</h2>
       <div class="modal-score" id="final-score">0</div>
       <div class="modal-sub" id="final-sub">Reached level 1</div>
+      <div style="display:flex;gap:1.5rem;justify-content:center;margin:0.75rem 0 1.5rem;flex-wrap:wrap" id="stats-row">
+        <div style="text-align:center">
+          <div class="stat-label">Accuracy</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem" id="stat-accuracy">—</div>
+        </div>
+        <div style="text-align:center">
+          <div class="stat-label">Best streak</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem" id="stat-streak">—</div>
+        </div>
+      </div>
       <div class="name-input-row">
         <input type="text" id="player-name" placeholder="Your name" maxlength="20" />
         <button class="btn btn-accent" onclick="saveScore()">Save</button>
@@ -300,6 +320,9 @@
   let timerVal    = 10;
   let timerInterval = null;
   let locked      = false;  // prevent double-submit
+  let totalAttempts   = 0;
+  let correctAttempts = 0;
+  let bestStreak      = 0;
   const STREAK_TO_LEVEL = 4;
   const CIRCUMFERENCE   = 2 * Math.PI * 26; // ~163.4
 
@@ -363,6 +386,61 @@
     return { display: `${a} ${op} ${b} = ?`, answer: ans };
   }
 
+  function safeEval(expr) {
+    expr = expr.trim();
+    let pos = 0;
+    function peek() { return expr[pos]; }
+    function consume() { return expr[pos++]; }
+    function skipWs() { while (pos < expr.length && expr[pos] === ' ') pos++; }
+
+    function parseExpr() { return parseAddSub(); }
+
+    function parseAddSub() {
+      let left = parseMulDiv();
+      skipWs();
+      while (pos < expr.length && (peek() === '+' || peek() === '-')) {
+        const op = consume(); skipWs();
+        const right = parseMulDiv();
+        left = op === '+' ? left + right : left - right;
+        skipWs();
+      }
+      return left;
+    }
+
+    function parseMulDiv() {
+      let left = parseUnary();
+      skipWs();
+      while (pos < expr.length && (peek() === '*' || peek() === '/')) {
+        const op = consume(); skipWs();
+        const right = parseUnary();
+        left = op === '*' ? left * right : left / right;
+        skipWs();
+      }
+      return left;
+    }
+
+    function parseUnary() {
+      skipWs();
+      if (peek() === '-') { consume(); return -parseAtom(); }
+      return parseAtom();
+    }
+
+    function parseAtom() {
+      skipWs();
+      if (peek() === '(') {
+        consume();
+        const val = parseExpr();
+        consume(); // ')'
+        return val;
+      }
+      let num = '';
+      while (pos < expr.length && /\d/.test(peek())) num += consume();
+      return parseInt(num, 10);
+    }
+
+    return parseExpr();
+  }
+
   function multiStep(lvl, steps, ops) {
     // Build a chain: a op1 b op2 c = ?
     // Compute safely with correct precedence by using actual JS eval
@@ -398,7 +476,7 @@
 
     let answer;
     try {
-      answer = eval(jsExpr); // safe: we constructed the string ourselves
+      answer = safeEval(jsExpr);
       if (!Number.isInteger(answer) || Math.abs(answer) > 9999) {
         return singleStep(lvl, ops); // fallback if ugly
       }
@@ -439,6 +517,7 @@
   function onTimeout() {
     if (locked) return;
     locked = true;
+    totalAttempts++;
     lives--;
     streak = Math.max(0, streak - 1);
     setFeedback(`Time! Answer was ${currentAns}`, 'wrong');
@@ -451,6 +530,21 @@
         nextProblem();
       }, 1200);
     }
+  }
+
+  // ── Animated score ─────────────────────────────────────────────
+  function animateScore(from, to) {
+    const el = document.getElementById('score-display');
+    const diff = to - from;
+    if (diff === 0) return;
+    const steps = 18;
+    const stepTime = 25;
+    let step = 0;
+    const iv = setInterval(() => {
+      step++;
+      el.textContent = Math.round(from + diff * (step / steps)).toLocaleString();
+      if (step >= steps) { el.textContent = to.toLocaleString(); clearInterval(iv); }
+    }, stepTime);
   }
 
   // ── UI helpers ─────────────────────────────────────────────────
@@ -517,14 +611,19 @@
 
     const eq = document.getElementById('equation');
 
+    totalAttempts++;
     if (guess === currentAns) {
+      correctAttempts++;
       eq.classList.add('eq-correct');
       const timeBonus = timerVal * 5;
       const points = Math.round((80 * level + timeBonus) * (1 + streak * 0.15));
+      const oldScore = score;
       score += points;
       streak++;
+      if (streak > bestStreak) bestStreak = streak;
       setFeedback(`+${points}  Correct!`, 'correct');
       if (streak >= STREAK_TO_LEVEL) { level++; streak = 0; }
+      animateScore(oldScore, score);
       updateScoreDisplay();
       renderStreakDots();
       setTimeout(() => {
@@ -554,6 +653,7 @@
   // ── Game flow ──────────────────────────────────────────────────
   function startGame() {
     score = 0; level = 1; lives = 3; streak = 0; locked = false;
+    totalAttempts = 0; correctAttempts = 0; bestStreak = 0;
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('game-area').classList.remove('hidden');
     document.getElementById('lives-display').textContent = 3;
@@ -569,7 +669,15 @@
 
     const prob = generateProblem(level);
     currentAns = prob.answer;
-    document.getElementById('equation').textContent = prob.display;
+
+    const puzzleContent = document.getElementById('puzzle-content');
+    puzzleContent.classList.add('puzzle-fade-out');
+    setTimeout(() => {
+      puzzleContent.classList.remove('puzzle-fade-out');
+      document.getElementById('equation').textContent = prob.display;
+      puzzleContent.classList.add('puzzle-fade-in');
+      setTimeout(() => puzzleContent.classList.remove('puzzle-fade-in'), 220);
+    }, 180);
 
     startTimer();
   }
@@ -579,6 +687,9 @@
     clearInterval(timerInterval);
     document.getElementById('final-score').textContent = score.toLocaleString();
     document.getElementById('final-sub').textContent = `Reached level ${level}`;
+    const accuracy = totalAttempts > 0 ? Math.round(correctAttempts / totalAttempts * 100) : 0;
+    document.getElementById('stat-accuracy').textContent = accuracy + '%';
+    document.getElementById('stat-streak').textContent = bestStreak;
     document.getElementById('gameover-overlay').classList.remove('hidden');
     document.getElementById('player-name').focus();
   }
@@ -605,6 +716,39 @@
     else if (e.key === '-') toggleNeg();
     else if (e.key === 'Enter') submitAnswer();
   });
+
+  // ── Personal best ──────────────────────────────────────────────
+  (function loadBest() {
+    const best = Storage.getBest('arithmetic');
+    if (best) {
+      document.getElementById('personal-best-display').textContent = best.score.toLocaleString();
+      document.getElementById('best-badge').style.display = '';
+    }
+  })();
+  </script>
+
+  <script>
+  (function initTheme() {
+    const saved = localStorage.getItem('puzzlebank_theme');
+    if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    updateThemeIcon();
+  })();
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('puzzlebank_theme', 'light');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('puzzlebank_theme', 'dark');
+    }
+    updateThemeIcon();
+  }
+  function updateThemeIcon() {
+    const el = document.getElementById('theme-icon');
+    if (!el) return;
+    el.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '○' : '☽';
+  }
   </script>
 </body>
 </html>
