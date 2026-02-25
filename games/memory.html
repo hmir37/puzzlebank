@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memory Grid — Puzzlebank</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    /* ── Memory-specific ───────────────────────────────────────── */
+    .grid-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .grid {
+      display: grid;
+      gap: 6px;
+    }
+
+    .cell {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .cell.lit {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .cell.selected {
+      background: var(--sage);
+      border-color: var(--sage);
+    }
+
+    .cell.correct-flash {
+      background: var(--correct);
+      border-color: var(--correct);
+    }
+
+    .cell.wrong-flash {
+      background: var(--wrong);
+      border-color: var(--wrong);
+    }
+
+    .cell:hover:not(.locked) {
+      transform: scale(1.06);
+    }
+
+    .cell.locked { cursor: default; }
+
+    /* Phase label */
+    .phase-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-align: center;
+      min-height: 1rem;
+    }
+
+    /* Countdown timer arc */
+    .countdown-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .countdown-bar {
+      width: 200px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .countdown-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width 0.1s linear;
+    }
+
+    /* Start screen */
+    .start-screen {
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+    }
+    .start-screen h2 { margin-bottom: 0.75rem; }
+    .start-screen p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      max-width: 340px;
+      margin: 0 auto 2rem;
+      line-height: 1.7;
+    }
+
+    /* Grid size badge */
+    .grid-size-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+    }
+
+    /* Submit row */
+    .submit-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="site-nav">
+    <a href="../index.html" class="logo">Puzzlebank</a>
+    <a href="../index.html" class="nav-link">← All games</a>
+  </nav>
+
+  <main class="game-wrap">
+
+    <div class="game-header">
+      <div>
+        <h1 class="game-title">Memory Grid</h1>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0.3rem">Watch, then recreate</p>
+      </div>
+      <div class="game-meta">
+        <span class="stat-label">Score</span>
+        <span class="stat-value" id="score-display">0</span>
+        <div class="level-badge mt-1">
+          <span class="stat-label">Level</span>
+          <span id="level-display" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300">1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <!-- Start screen -->
+    <div id="start-screen" class="start-screen">
+      <h2>How to play</h2>
+      <p>
+        A pattern of highlighted cells will flash briefly.
+        Memorise it, then tap all the correct cells.
+        The grid grows and flash time shrinks as you level up.
+      </p>
+      <button class="btn btn-filled" onclick="startGame()">Begin</button>
+    </div>
+
+    <!-- Game area -->
+    <div id="game-area" class="hidden">
+      <div class="phase-label" id="phase-label">Get ready…</div>
+
+      <div class="grid-container">
+        <div id="grid" class="grid"></div>
+
+        <div class="countdown-wrap hidden" id="countdown-wrap">
+          <div class="countdown-bar">
+            <div class="countdown-fill" id="countdown-fill" style="width:100%"></div>
+          </div>
+          <span class="grid-size-label" id="grid-size-label"></span>
+        </div>
+      </div>
+
+      <div class="submit-row">
+        <div class="feedback" id="feedback"></div>
+        <button class="btn btn-sage hidden" id="submit-btn" onclick="checkAnswer()">
+          Submit →
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Game-over modal -->
+  <div class="overlay hidden" id="gameover-overlay">
+    <div class="modal">
+      <h2>Game Over</h2>
+      <div class="modal-score" id="final-score">0</div>
+      <div class="modal-sub" id="final-sub">Reached level 1</div>
+      <div class="name-input-row">
+        <input type="text" id="player-name" placeholder="Your name" maxlength="20" />
+        <button class="btn btn-sage" onclick="saveScore()">Save</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-dark" onclick="restartGame()">Play again</button>
+        <a href="../index.html" class="btn btn-dark">Home</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/storage.js"></script>
+  <script>
+  /* ================================================================
+     Memory Grid Game Logic
+     ================================================================ */
+
+  // ── State ──────────────────────────────────────────────────────
+  let score  = 0;
+  let level  = 1;
+  let lives  = 3;
+  let streak = 0;
+  const STREAK_TO_LEVEL = 2;
+
+  let correctCells = new Set();   // indices that should be selected
+  let selectedCells = new Set();  // player's current selection
+  let gridSize = 3;               // N×N
+  let cellCount = 0;              // lit cells this round
+  let phase = 'idle';             // idle | show | input
+  let countdownTimer = null;
+
+  // ── Config by level ────────────────────────────────────────────
+  function getConfig(lvl) {
+    // Grid size: 3 → 4 → 5 (capped)
+    const size = Math.min(3 + Math.floor((lvl - 1) / 4), 6);
+    // Number of cells to remember: starts at 3, grows
+    const cells = Math.min(3 + Math.floor((lvl - 1) * 0.8), size * size - 2);
+    // Flash duration in ms: starts at 2500, floors at 600
+    const flashMs = Math.max(2500 - (lvl - 1) * 120, 600);
+    return { size, cells, flashMs };
+  }
+
+  // ── DOM helpers ────────────────────────────────────────────────
+  function updateScoreDisplay() {
+    document.getElementById('score-display').textContent = score.toLocaleString();
+    document.getElementById('level-display').textContent = level;
+    document.getElementById('progress-fill').style.width =
+      (streak / STREAK_TO_LEVEL * 100) + '%';
+  }
+
+  function setPhaseLabel(text) {
+    document.getElementById('phase-label').textContent = text;
+  }
+
+  function setFeedback(msg, cls) {
+    const el = document.getElementById('feedback');
+    el.textContent = msg;
+    el.className = 'feedback ' + (cls || '');
+  }
+
+  // ── Grid rendering ─────────────────────────────────────────────
+  function buildGrid(size) {
+    const grid = document.getElementById('grid');
+    grid.style.gridTemplateColumns = `repeat(${size}, 52px)`;
+    grid.innerHTML = '';
+    for (let i = 0; i < size * size; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell locked';
+      cell.dataset.idx = i;
+      cell.addEventListener('click', () => toggleCell(i));
+      grid.appendChild(cell);
+    }
+  }
+
+  function getCellEl(idx) {
+    return document.querySelector(`.cell[data-idx="${idx}"]`);
+  }
+
+  function flashCells(indices) {
+    indices.forEach(i => {
+      const el = getCellEl(i);
+      if (el) el.classList.add('lit');
+    });
+  }
+
+  function hideAllLit() {
+    document.querySelectorAll('.cell.lit').forEach(el => el.classList.remove('lit'));
+  }
+
+  function toggleCell(idx) {
+    if (phase !== 'input') return;
+    if (selectedCells.has(idx)) {
+      selectedCells.delete(idx);
+      getCellEl(idx).classList.remove('selected');
+    } else {
+      selectedCells.add(idx);
+      getCellEl(idx).classList.add('selected');
+    }
+  }
+
+  function lockGrid() {
+    document.querySelectorAll('.cell').forEach(el => el.classList.add('locked'));
+  }
+
+  function unlockGrid() {
+    document.querySelectorAll('.cell').forEach(el => el.classList.remove('locked'));
+  }
+
+  // ── Round flow ─────────────────────────────────────────────────
+  function startGame() {
+    score = 0; level = 1; lives = 3; streak = 0;
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('game-area').classList.remove('hidden');
+    updateScoreDisplay();
+    nextRound();
+  }
+
+  function nextRound() {
+    phase = 'idle';
+    selectedCells = new Set();
+    const cfg = getConfig(level);
+    gridSize = cfg.size;
+    cellCount = cfg.cells;
+
+    document.getElementById('grid-size-label').textContent =
+      `${gridSize}×${gridSize} grid · ${cellCount} cells`;
+
+    buildGrid(gridSize);
+    setFeedback('');
+    document.getElementById('submit-btn').classList.add('hidden');
+    document.getElementById('countdown-wrap').classList.add('hidden');
+
+    // Pick random cells to light up
+    const total = gridSize * gridSize;
+    const pool = shuffle([...Array(total).keys()]);
+    correctCells = new Set(pool.slice(0, cellCount));
+
+    // Brief pause before flash
+    setPhaseLabel('Memorise…');
+    setTimeout(() => {
+      phase = 'show';
+      flashCells([...correctCells]);
+      startCountdown(cfg.flashMs);
+    }, 600);
+  }
+
+  function startCountdown(ms) {
+    const fill = document.getElementById('countdown-fill');
+    const wrap = document.getElementById('countdown-wrap');
+    wrap.classList.remove('hidden');
+    fill.style.transition = 'none';
+    fill.style.width = '100%';
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        fill.style.transition = `width ${ms}ms linear`;
+        fill.style.width = '0%';
+      });
+    });
+
+    countdownTimer = setTimeout(() => {
+      endShowPhase();
+    }, ms);
+  }
+
+  function endShowPhase() {
+    hideAllLit();
+    phase = 'input';
+    unlockGrid();
+    setPhaseLabel('Recreate the pattern');
+    document.getElementById('submit-btn').classList.remove('hidden');
+    document.getElementById('countdown-wrap').classList.add('hidden');
+  }
+
+  function checkAnswer() {
+    if (phase !== 'input') return;
+    phase = 'checking';
+    lockGrid();
+    document.getElementById('submit-btn').classList.add('hidden');
+
+    // Compare
+    let allCorrect = true;
+    const totalCells = gridSize * gridSize;
+
+    for (let i = 0; i < totalCells; i++) {
+      const el = getCellEl(i);
+      if (!el) continue;
+      const shouldBe = correctCells.has(i);
+      const selected = selectedCells.has(i);
+
+      if (shouldBe && selected) {
+        el.classList.add('correct-flash');
+      } else if (shouldBe && !selected) {
+        el.classList.add('correct-flash'); // show what was missed
+        allCorrect = false;
+      } else if (!shouldBe && selected) {
+        el.classList.add('wrong-flash');   // wrong pick
+        allCorrect = false;
+      }
+    }
+
+    if (allCorrect) {
+      const points = Math.round(150 * level * (1 + (cellCount / (gridSize * gridSize))));
+      score += points;
+      streak++;
+      setFeedback(`+${points}  Perfect!`, 'correct');
+      if (streak >= STREAK_TO_LEVEL) { level++; streak = 0; }
+      updateScoreDisplay();
+      setTimeout(nextRound, 1200);
+    } else {
+      lives--;
+      streak = Math.max(0, streak - 1);
+      setFeedback(lives > 0 ? `${lives} mistake${lives !== 1 ? 's' : ''} remaining` : '', 'wrong');
+      if (lives <= 0) {
+        setTimeout(showGameOver, 1200);
+      } else {
+        setTimeout(nextRound, 1400);
+      }
+    }
+  }
+
+  // ── Utilities ──────────────────────────────────────────────────
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // ── Game over ──────────────────────────────────────────────────
+  function showGameOver() {
+    clearTimeout(countdownTimer);
+    document.getElementById('final-score').textContent = score.toLocaleString();
+    document.getElementById('final-sub').textContent = `Reached level ${level}`;
+    document.getElementById('gameover-overlay').classList.remove('hidden');
+    document.getElementById('player-name').focus();
+  }
+
+  function saveScore() {
+    const name = document.getElementById('player-name').value.trim() || 'Anonymous';
+    Storage.addScore('memory', { name, score, level });
+    document.getElementById('player-name').disabled = true;
+    document.querySelector('#gameover-overlay .btn-sage').disabled = true;
+  }
+
+  function restartGame() {
+    document.getElementById('gameover-overlay').classList.add('hidden');
+    clearTimeout(countdownTimer);
+    startGame();
+  }
+  </script>
+</body>
+</html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Puzzlebank — Mind Games</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ── Home-specific styles ───────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 5rem 1.5rem 3.5rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+
+    .hero h1 {
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-sub {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 380px;
+      margin: 0 auto 2rem;
+      line-height: 1.75;
+    }
+
+    /* ── Game grid ──────────────────────────────────────────────── */
+    .games-section {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+    }
+
+    .section-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 3.5rem;
+    }
+
+    .game-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.75rem 1.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .game-card:hover {
+      box-shadow: 0 6px 28px rgba(0,0,0,0.08);
+      transform: translateY(-2px);
+    }
+
+    .game-icon {
+      font-size: 1.8rem;
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+
+    .game-card h3 {
+      font-size: 1.2rem;
+      color: var(--text);
+    }
+
+    .game-card-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .game-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .game-best {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+    }
+
+    .game-best strong {
+      display: block;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: var(--accent);
+    }
+
+    /* ── Leaderboard section ────────────────────────────────────── */
+    .lb-section {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 1.5rem 5rem;
+    }
+
+    .lb-empty {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-md);
+    }
+
+    /* Accent line under game icon */
+    .card-accent {
+      display: inline-block;
+      width: 24px;
+      height: 2px;
+      border-radius: 2px;
+      margin-top: 0.1rem;
+    }
+    .ca-seq  { background: var(--accent); }
+    .ca-mem  { background: var(--sage); }
+    .ca-ana  { background: #A08878; }
+    .ca-arith { background: var(--text-muted); }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="site-nav">
+    <span class="logo">Puzzlebank</span>
+    <a href="#leaderboard" class="nav-link">Leaderboard</a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <span class="hero-eyebrow">Train your mind</span>
+    <h1>Small games.<br>Endless challenge.</h1>
+    <p class="hero-sub">
+      Four adaptive puzzles that grow harder the better you play.
+      No two rounds are ever alike.
+    </p>
+  </section>
+
+  <!-- Game cards -->
+  <section class="games-section">
+    <p class="section-label">Choose a game</p>
+
+    <div class="games-grid">
+
+      <!-- Sequence -->
+      <a class="game-card" href="games/sequence.html">
+        <span class="game-icon">∿</span>
+        <span class="card-accent ca-seq"></span>
+        <h3>Number Sequence</h3>
+        <p class="game-card-desc">
+          Spot the hidden pattern and find the next number in the series.
+          Patterns grow progressively more intricate.
+        </p>
+        <div class="game-card-footer">
+          <div class="game-best">
+            Best score
+            <strong id="best-sequence">—</strong>
+          </div>
+          <span class="btn btn-accent">Play</span>
+        </div>
+      </a>
+
+      <!-- Memory -->
+      <a class="game-card" href="games/memory.html">
+        <span class="game-icon">⬚</span>
+        <span class="card-accent ca-mem"></span>
+        <h3>Memory Grid</h3>
+        <p class="game-card-desc">
+          A pattern flashes briefly. Recreate it from memory.
+          The grid grows and the flash shortens as your level rises.
+        </p>
+        <div class="game-card-footer">
+          <div class="game-best">
+            Best score
+            <strong id="best-memory">—</strong>
+          </div>
+          <span class="btn btn-sage">Play</span>
+        </div>
+      </a>
+
+      <!-- Anagram -->
+      <a class="game-card" href="games/anagram.html">
+        <span class="game-icon">≋</span>
+        <span class="card-accent ca-ana"></span>
+        <h3>Anagram</h3>
+        <p class="game-card-desc">
+          Unscramble the shuffled letters to reveal a hidden word.
+          Words get longer and less common with every level.
+        </p>
+        <div class="game-card-footer">
+          <div class="game-best">
+            Best score
+            <strong id="best-anagram">—</strong>
+          </div>
+          <span class="btn btn-dark">Play</span>
+        </div>
+      </a>
+
+      <!-- Arithmetic -->
+      <a class="game-card" href="games/arithmetic.html">
+        <span class="game-icon">±</span>
+        <span class="card-accent ca-arith"></span>
+        <h3>Arithmetic</h3>
+        <p class="game-card-desc">
+          Mental maths under the clock. Operations compound and
+          time pressure increases with each level.
+        </p>
+        <div class="game-card-footer">
+          <div class="game-best">
+            Best score
+            <strong id="best-arithmetic">—</strong>
+          </div>
+          <span class="btn btn-dark">Play</span>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- Leaderboard -->
+    <div id="leaderboard">
+      <p class="section-label">Global leaderboard</p>
+      <div id="lb-content">
+        <div class="lb-empty">No scores yet — play a game to get on the board.</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Puzzlebank</span>
+    <span>Scores stored locally in your browser</span>
+  </footer>
+
+  <script src="js/storage.js"></script>
+  <script>
+    // Populate personal bests on cards
+    ['sequence', 'memory', 'anagram', 'arithmetic'].forEach(id => {
+      const best = Storage.getBest(id);
+      const el = document.getElementById('best-' + id);
+      if (best && el) el.textContent = best.score.toLocaleString();
+    });
+
+    // Render global leaderboard
+    function renderLB() {
+      const scores = Storage.getGlobalTop(10);
+      const container = document.getElementById('lb-content');
+      if (!scores.length) return;
+
+      const medals = ['🥇', '🥈', '🥉'];
+      const rows = scores.map((s, i) => `
+        <tr class="${i === 0 ? 'lb-rank-1' : ''}">
+          <td>${medals[i] || i + 1}</td>
+          <td>${escHtml(s.name)}</td>
+          <td>${escHtml(s.game)}</td>
+          <td class="lb-score">${s.score.toLocaleString()}</td>
+          <td style="text-align:right; color:var(--text-muted); font-size:0.75rem">${escHtml(s.date)}</td>
+        </tr>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="card" style="padding:0; overflow:hidden;">
+          <table class="lb-table">
+            <thead>
+              <tr>
+                <th>#</th><th>Player</th><th>Game</th><th>Score</th><th style="text-align:right">Date</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    renderLB();
+  </script>
+</body>
+</html>
