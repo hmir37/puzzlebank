@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Number Sequence — Puzzlebank</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    /* ── Sequence-specific ─────────────────────────────────────── */
+    .sequence-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin: 2.5rem 0;
+    }
+
+    .seq-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.6rem, 5vw, 2.6rem);
+      font-weight: 300;
+      width: clamp(56px, 10vw, 72px);
+      height: clamp(56px, 10vw, 72px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      transition: border-color 0.2s;
+    }
+
+    .seq-num.unknown {
+      border-color: var(--accent);
+      color: var(--accent);
+      font-size: 1.8rem;
+    }
+
+    .seq-sep {
+      color: var(--border);
+      font-size: 1.2rem;
+    }
+
+    /* Answer input */
+    .answer-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .answer-input-wrap {
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    .answer-input {
+      width: 120px;
+      padding: 0.65rem 1rem;
+      text-align: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .answer-input:focus { border-color: var(--accent); }
+    .answer-input.shake {
+      animation: shake 0.35s ease;
+      border-color: var(--wrong);
+    }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+
+    /* Streak dots */
+    .streak-dots {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.25s;
+    }
+    .dot.filled { background: var(--accent); }
+    .dot.empty  { background: var(--wrong); }
+
+    /* Level hint */
+    .hint-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-align: center;
+      min-height: 1.2rem;
+    }
+
+    /* Start overlay */
+    .start-screen {
+      text-align: center;
+      padding: 3rem 1.5rem;
+    }
+
+    .start-screen h2 { margin-bottom: 0.75rem; }
+    .start-screen p  {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      max-width: 340px;
+      margin: 0 auto 2rem;
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="site-nav">
+    <a href="../index.html" class="logo">Puzzlebank</a>
+    <a href="../index.html" class="nav-link">← All games</a>
+  </nav>
+
+  <main class="game-wrap">
+
+    <!-- Header row -->
+    <div class="game-header">
+      <div>
+        <h1 class="game-title">Number Sequence</h1>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0.3rem">Find the missing number</p>
+      </div>
+      <div class="game-meta">
+        <span class="stat-label">Score</span>
+        <span class="stat-value" id="score-display">0</span>
+        <div class="level-badge mt-1">
+          <span class="stat-label">Level</span>
+          <span id="level-display" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300">1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress bar (streak towards level-up) -->
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <!-- Start screen -->
+    <div id="start-screen" class="start-screen">
+      <h2>How to play</h2>
+      <p>
+        A sequence of numbers will appear with one missing.
+        Identify the pattern and enter the correct number.
+        Three mistakes end the game.
+      </p>
+      <button class="btn btn-filled" onclick="startGame()">Begin</button>
+    </div>
+
+    <!-- Game area (hidden until start) -->
+    <div id="game-area" class="hidden">
+
+      <div class="streak-dots" id="streak-dots"></div>
+
+      <div class="sequence-display" id="sequence-display"></div>
+
+      <div class="answer-area">
+        <div class="hint-text" id="hint-text"></div>
+        <div class="answer-input-wrap">
+          <input
+            type="number"
+            class="answer-input"
+            id="answer-input"
+            placeholder="?"
+            autocomplete="off"
+          />
+          <button class="btn btn-accent" id="submit-btn" onclick="submitAnswer()">
+            Check →
+          </button>
+        </div>
+        <div class="feedback" id="feedback"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Game-over modal -->
+  <div class="overlay hidden" id="gameover-overlay">
+    <div class="modal">
+      <h2>Game Over</h2>
+      <div class="modal-score" id="final-score">0</div>
+      <div class="modal-sub" id="final-sub">Reached level 1</div>
+      <div class="name-input-row">
+        <input type="text" id="player-name" placeholder="Your name" maxlength="20" />
+        <button class="btn btn-accent" onclick="saveScore()">Save</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-dark" onclick="restartGame()">Play again</button>
+        <a href="../index.html" class="btn btn-dark">Home</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/storage.js"></script>
+  <script>
+  /* ================================================================
+     Number Sequence Game Logic
+     ================================================================ */
+
+  // ── State ──────────────────────────────────────────────────────
+  let score    = 0;
+  let level    = 1;
+  let lives    = 3;       // mistakes allowed
+  let streak   = 0;       // correct in a row towards level-up
+  let answer   = null;
+  let scored   = false;   // prevent double-submit
+  const STREAK_TO_LEVEL = 3; // correct answers to advance level
+
+  // ── Sequence generators ────────────────────────────────────────
+  /**
+   * Returns { sequence: number[], answer: number, hint: string }
+   * The '?' replaces answer at a random position (not first).
+   */
+  function generateSequence(lvl) {
+    const generators = [
+      genArithmetic,
+      genArithmetic,
+      genGeometric,
+      genArithmetic,
+      genFibLike,
+      genGeometric,
+      genPolynomial,
+      genAlternating,
+      genPower,
+      genTriangular,
+    ];
+
+    const genFn = generators[Math.min(lvl - 1, generators.length - 1)];
+    return genFn(lvl);
+  }
+
+  function genArithmetic(lvl) {
+    const step = randInt(1, 3 + lvl * 2) * (Math.random() < 0.2 ? -1 : 1);
+    const start = randInt(-10 * lvl, 10 * lvl);
+    const len = Math.min(4 + Math.floor(lvl / 3), 7);
+    const seq = Array.from({ length: len }, (_, i) => start + step * i);
+    return wrapQuestion(seq, `Arithmetic  (add ${step})`);
+  }
+
+  function genGeometric(lvl) {
+    const ratio = randInt(2, 3 + Math.floor(lvl / 2));
+    const start = randInt(1, 5 + lvl);
+    const len = Math.min(4 + Math.floor(lvl / 4), 6);
+    const seq = Array.from({ length: len }, (_, i) => start * Math.pow(ratio, i));
+    if (seq.some(n => Math.abs(n) > 9999999)) return genArithmetic(lvl);
+    return wrapQuestion(seq, `Geometric  (×${ratio})`);
+  }
+
+  function genFibLike(lvl) {
+    const a = randInt(1, 5 + lvl);
+    const b = randInt(1, 5 + lvl);
+    const len = 6 + Math.floor(lvl / 3);
+    const seq = [a, b];
+    for (let i = 2; i < len; i++) seq.push(seq[i-1] + seq[i-2]);
+    if (seq.some(n => Math.abs(n) > 9999999)) return genArithmetic(lvl);
+    return wrapQuestion(seq, 'Each term = sum of previous two');
+  }
+
+  function genPolynomial(lvl) {
+    const a = randInt(1, 2 + Math.floor(lvl / 4));
+    const b = randInt(-3, 3);
+    const len = 5 + Math.floor(lvl / 3);
+    const seq = Array.from({ length: len }, (_, i) => a * i * i + b * i + randInt(0, 3));
+    return wrapQuestion(seq, 'Quadratic pattern');
+  }
+
+  function genAlternating(lvl) {
+    const step1 = randInt(2, 5 + lvl);
+    const step2 = randInt(1, 3 + lvl) * -1;
+    const start = randInt(1, 20 + lvl);
+    const len = 6;
+    const seq = [start];
+    for (let i = 1; i < len; i++) {
+      seq.push(seq[i-1] + (i % 2 === 0 ? step1 : step2));
+    }
+    return wrapQuestion(seq, `Alternating steps: +${step1}, ${step2}`);
+  }
+
+  function genPower(lvl) {
+    const base = randInt(2, 3);
+    const len = 5;
+    const offset = randInt(0, lvl);
+    const seq = Array.from({ length: len }, (_, i) => Math.pow(base, i + offset));
+    if (seq.some(n => n > 9999999)) return genArithmetic(lvl);
+    return wrapQuestion(seq, `Powers of ${base}`);
+  }
+
+  function genTriangular(lvl) {
+    const offset = randInt(0, lvl);
+    const len = 6;
+    const seq = Array.from({ length: len }, (_, i) => {
+      const n = i + 1 + offset;
+      return n * (n + 1) / 2;
+    });
+    return wrapQuestion(seq, 'Triangular numbers');
+  }
+
+  /** Pick a random position (not index 0) to replace with '?' */
+  function wrapQuestion(seq, hint) {
+    const pos = randInt(2, seq.length - 1);
+    const ans = seq[pos];
+    const display = seq.map((n, i) => i === pos ? '?' : n);
+    return { display, answer: ans, hint };
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────
+  function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  // ── UI helpers ─────────────────────────────────────────────────
+  function updateScoreDisplay() {
+    document.getElementById('score-display').textContent = score.toLocaleString();
+    document.getElementById('level-display').textContent = level;
+    document.getElementById('progress-fill').style.width =
+      (streak / STREAK_TO_LEVEL * 100) + '%';
+  }
+
+  function renderStreakDots() {
+    const container = document.getElementById('streak-dots');
+    container.innerHTML = '';
+    for (let i = 0; i < STREAK_TO_LEVEL; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i < streak ? ' filled' : '');
+      container.appendChild(d);
+    }
+  }
+
+  function setFeedback(msg, cls) {
+    const el = document.getElementById('feedback');
+    el.textContent = msg;
+    el.className = 'feedback ' + (cls || '');
+  }
+
+  // ── Game flow ──────────────────────────────────────────────────
+  let current = null;
+
+  function startGame() {
+    score  = 0; level = 1; lives = 3; streak = 0;
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('game-area').classList.remove('hidden');
+    nextPuzzle();
+  }
+
+  function nextPuzzle() {
+    scored = false;
+    current = generateSequence(level);
+    renderSequence(current.display);
+    document.getElementById('hint-text').textContent = '';
+    setFeedback('');
+    updateScoreDisplay();
+    renderStreakDots();
+
+    const input = document.getElementById('answer-input');
+    input.value = '';
+    input.classList.remove('shake');
+    input.focus();
+  }
+
+  function renderSequence(display) {
+    const container = document.getElementById('sequence-display');
+    container.innerHTML = '';
+    display.forEach((val, i) => {
+      if (i > 0) {
+        const sep = document.createElement('span');
+        sep.className = 'seq-sep';
+        sep.textContent = ',';
+        container.appendChild(sep);
+      }
+      const box = document.createElement('div');
+      box.className = 'seq-num' + (val === '?' ? ' unknown' : '');
+      box.textContent = val;
+      container.appendChild(box);
+    });
+  }
+
+  function submitAnswer() {
+    if (scored) return;
+    const input = document.getElementById('answer-input');
+    const raw = input.value.trim();
+    if (raw === '') return;
+    const guess = parseFloat(raw);
+    scored = true;
+
+    if (guess === current.answer) {
+      // Correct
+      const points = Math.round(100 * level * (1 + streak * 0.1));
+      score += points;
+      streak++;
+      setFeedback(`+${points}  Correct!`, 'correct');
+
+      if (streak >= STREAK_TO_LEVEL) {
+        level++;
+        streak = 0;
+      }
+
+      updateScoreDisplay();
+      renderStreakDots();
+      setTimeout(nextPuzzle, 900);
+
+    } else {
+      // Wrong
+      lives--;
+      streak = Math.max(0, streak - 1);
+      input.classList.add('shake');
+      setFeedback(`Answer was ${current.answer}`, 'wrong');
+      document.getElementById('hint-text').textContent = current.hint;
+
+      // Mark a streak dot red briefly
+      const dots = document.querySelectorAll('.dot');
+      if (dots[streak]) {
+        const d = dots[Math.min(streak, dots.length - 1)];
+        d.classList.add('empty');
+      }
+
+      if (lives <= 0) {
+        setTimeout(showGameOver, 1000);
+      } else {
+        setTimeout(() => {
+          scored = false;
+          input.classList.remove('shake');
+          setFeedback(`${lives} mistake${lives !== 1 ? 's' : ''} remaining`, '');
+          input.focus();
+        }, 1200);
+      }
+    }
+  }
+
+  function showGameOver() {
+    document.getElementById('final-score').textContent = score.toLocaleString();
+    document.getElementById('final-sub').textContent = `Reached level ${level}`;
+    document.getElementById('gameover-overlay').classList.remove('hidden');
+    document.getElementById('player-name').focus();
+  }
+
+  function saveScore() {
+    const name = document.getElementById('player-name').value.trim() || 'Anonymous';
+    Storage.addScore('sequence', { name, score, level });
+    document.getElementById('player-name').disabled = true;
+    document.querySelector('#gameover-overlay .btn-accent').disabled = true;
+    setFeedback('Score saved!', 'correct');
+  }
+
+  function restartGame() {
+    document.getElementById('gameover-overlay').classList.add('hidden');
+    startGame();
+  }
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const overlay = document.getElementById('gameover-overlay');
+      if (!overlay.classList.contains('hidden')) return;
+      submitAnswer();
+    }
+  });
+  </script>
+</body>
+</html>
